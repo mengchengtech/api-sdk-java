@@ -2,14 +2,24 @@ package com.mctech.sdk.openapi;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
+import com.mctech.sdk.openapi.exception.MCTechOpenApiRequestException;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.*;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class RequestResult implements Closeable {
 
@@ -74,7 +84,7 @@ public class RequestResult implements Closeable {
         return this.contentType;
     }
 
-    RequestResult(CloseableHttpResponse response) {
+    RequestResult(CloseableHttpResponse response) throws MCTechOpenApiRequestException {
         this.response = response;
         Header h = response.getEntity().getContentType();
         if (h != null) {
@@ -82,9 +92,33 @@ public class RequestResult implements Closeable {
         }
 
         this.statusCode = response.getStatusLine().getStatusCode();
+
+        if (this.statusCode >= HttpStatus.SC_BAD_REQUEST) {
+            ApiGatewayError error = createError(response);
+            throw new MCTechOpenApiRequestException(error.getMessage(), error);
+        }
     }
 
     public void close() throws IOException {
         this.response.close();
     }
+
+    @SneakyThrows
+    private static ApiGatewayError createError(CloseableHttpResponse response) {
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = dbf.newDocumentBuilder();
+        Document document = db.parse(response.getEntity().getContent());
+        NodeList items = document.getDocumentElement().getChildNodes();
+
+        Map<String, String> map = new HashMap<>();
+        for (int i = 0; i < items.getLength(); i++) {
+            Node item = items.item(i);
+            String name = item.getNodeName();
+            String value = item.getTextContent();
+            map.put(name, value);
+        }
+
+        return new ApiGatewayError(map);
+    }
 }
+

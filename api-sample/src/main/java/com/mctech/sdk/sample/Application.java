@@ -1,8 +1,11 @@
 package com.mctech.sdk.sample;
 
 import com.alibaba.fastjson.JSONArray;
+import com.mctech.sdk.openapi.ApiGatewayError;
 import com.mctech.sdk.openapi.OpenApiClient;
 import com.mctech.sdk.openapi.RequestResult;
+import com.mctech.sdk.openapi.exception.MCTechOpenApiException;
+import com.mctech.sdk.openapi.exception.MCTechOpenApiRequestException;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.log4j.LogManager;
@@ -116,6 +119,14 @@ public class Application {
                     break;
                 }
                 startId = projects.get(projects.size() - 1).getVersion();
+            } catch (MCTechOpenApiException e) {
+                logger.error(e.getMessage(), e);
+                // TODO: 处理异常
+                e.printStackTrace();
+            } catch (MCTechOpenApiRequestException e) {
+                logger.error(e.getMessage(), e);
+                ApiGatewayError error = e.getError();
+                // TODO: 处理api网关返回的异常
             }
         }
         return list;
