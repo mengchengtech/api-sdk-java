@@ -45,8 +45,10 @@ class SignUtility
     {
         URIBuilder urlBuilder = new URIBuilder(requestUri);
         List<NameValuePair> params = urlBuilder.getQueryParams();
-        params.sort(Comparator.comparing(NameValuePair::getName));
-        urlBuilder.removeQuery().addParameters(params);
+        if(!params.isEmpty()) {
+            params.sort(Comparator.comparing(NameValuePair::getName));
+            urlBuilder.removeQuery().addParameters(params);
+        }
         return urlBuilder.toString();
     }
 }

@@ -30,7 +30,8 @@ public class OpenApiClient {
     private static final String DEFAULT_CHARSET_NAME = "utf-8";
     private static final Charset DEFAULT_CHARSET = Charset.forName(DEFAULT_CHARSET_NAME);
 
-    private static final String CONTENT_TYPE = "application/json, application/xml";
+    private static final String CONTENT_TYPE = "application/json; charset=UTF-8";
+    private static final String ACCEPT = "application/json, application/xml";
 
     private final String accessId;
     private final String secretKey;
@@ -132,7 +133,7 @@ public class OpenApiClient {
             throws MCTechOpenApiException {
         String formatDate = DateUtils.formatDate(new Date());
         request.setHeader(new BasicHeader(HttpHeaders.DATE, formatDate));
-        request.setHeader(new BasicHeader(HttpHeaders.ACCEPT, formatDate));
+        request.setHeader(new BasicHeader(HttpHeaders.ACCEPT, ACCEPT));
         request.setHeader(new BasicHeader(HttpHeaders.ACCEPT_LANGUAGE, "zh-CN"));
         request.setHeader(new BasicHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE));
 
