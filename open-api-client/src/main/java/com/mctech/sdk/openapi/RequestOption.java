@@ -16,12 +16,15 @@ public class RequestOption {
     @Getter
     private final Map<String, String> headers;
     @Getter
+    private final String contentType;
+    @Getter
     private final HttpEntity entity;
 
-    RequestOption(Map<String, String> query, Map<String, String> headers, HttpEntity entity) {
+    RequestOption(Map<String, String> query, Map<String, String> headers, String contentType, HttpEntity entity) {
         this.query = query;
         this.headers = headers;
         this.entity = entity;
+        this.contentType = contentType;
     }
 
     public static Builder newBuilder() {
@@ -32,6 +35,7 @@ public class RequestOption {
         private final HashMap<String, String> query;
         private final HashMap<String, String> headers;
         private HttpEntity entity;
+        private String contentType;
 
         private Builder() {
             this.query = new HashMap<>();
@@ -45,6 +49,11 @@ public class RequestOption {
 
         public Builder header(String name, Object value) {
             this.headers.put(name, value.toString());
+            return this;
+        }
+
+        public Builder contentType(String contentType) {
+            this.contentType = contentType;
             return this;
         }
 
@@ -62,7 +71,7 @@ public class RequestOption {
         }
 
         public RequestOption build() {
-            return new RequestOption(this.query, this.headers, this.entity);
+            return new RequestOption(this.query, this.headers, this.contentType, this.entity);
         }
     }
 }

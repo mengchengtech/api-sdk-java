@@ -96,8 +96,16 @@ public class OpenApiClient {
         throws MCTechOpenApiException, MCTechOpenApiRequestException {
         if (req instanceof HttpEntityEnclosingRequest) {
             HttpEntity entity = option.getEntity();
+            HttpEntityEnclosingRequest entityReq = (HttpEntityEnclosingRequest) req;
             if (entity != null) {
-                ((HttpEntityEnclosingRequest) req).setEntity(entity);
+                entityReq.setEntity(entity);
+            }
+            if (entityReq.getEntity() != null) {
+                String contentType = option.getContentType();
+                if (StringUtils.isEmpty(option.getContentType())) {
+                    contentType = CONTENT_TYPE_VALUE;
+                }
+                req.setHeader(new BasicHeader(HttpHeaders.CONTENT_TYPE, contentType));
             }
         }
 
@@ -119,7 +127,6 @@ public class OpenApiClient {
 
         String formatDate = DateUtils.formatDate(new Date());
         req.setHeader(new BasicHeader(HttpHeaders.DATE, formatDate));
-        req.setHeader(new BasicHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_VALUE));
         makeSignature(req, option.getHeaders());
         CloseableHttpResponse response = this.httpClient.execute(req);
         return new RequestResult(response);
