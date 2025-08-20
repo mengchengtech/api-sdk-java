@@ -4,7 +4,7 @@ import com.mctech.sdk.openapi.exception.MCTechOpenApiException;
 import com.mctech.sdk.openapi.exception.MCTechOpenApiRequestException;
 import lombok.SneakyThrows;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.*;
 import org.apache.http.client.utils.DateUtils;
@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
@@ -85,7 +86,7 @@ public class OpenApiClient {
     public RequestResult put(String pathAndQuery, String body)
             throws MCTechOpenApiException, MCTechOpenApiRequestException {
         HttpPut httpPut = new HttpPut();
-        byte[] data = body.getBytes(Charset.forName("utf-8"));
+        byte[] data = body.getBytes(StandardCharsets.UTF_8);
         httpPut.setEntity(new ByteArrayEntity(data));
         return SendRequest(pathAndQuery, httpPut);
     }
@@ -102,7 +103,7 @@ public class OpenApiClient {
     public RequestResult patch(String pathAndQuery, String body)
             throws MCTechOpenApiException, MCTechOpenApiRequestException {
         HttpPatch httpPatch = new HttpPatch();
-        byte[] data = body.getBytes(Charset.forName("utf-8"));
+        byte[] data = body.getBytes(StandardCharsets.UTF_8);
         httpPatch.setEntity(new ByteArrayEntity(data));
         return SendRequest(pathAndQuery, httpPatch);
     }
@@ -123,8 +124,7 @@ public class OpenApiClient {
         request.setURI(apiUrl.toURI());
         initRequest(request);
         CloseableHttpResponse response = this.httpClient.execute(request);
-        RequestResult result = new RequestResult(response);
-        return result;
+        return new RequestResult(response);
     }
 
     @SneakyThrows({NoSuchAlgorithmException.class, InvalidKeyException.class})

@@ -1,7 +1,7 @@
 package com.mctech.sdk.openapi;
 
 import lombok.SneakyThrows;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 
@@ -25,8 +25,8 @@ class SignUtility {
         Map<String, String> headers = option.getHeaders();
         List<String> keys = headers.keySet().stream()
                 .filter(key -> key.toLowerCase().startsWith(OpenApiPrefix))
+                .sorted()
                 .collect(Collectors.toList());
-        keys.sort(null);
         for (String key : keys) {
             itemsToSign.add(key + ":" + headers.get(key));
         }

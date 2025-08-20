@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+        <Property name="log.dir">D:/logs/demo</Property>
+    </Properties>
+    <Appenders>
+        <!-- 控制台appender -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger - %msg %ex %n"/>
+        </Console>
+        <RollingFile name="appFileLog" fileName="${log.dir}/app.log"
+                     filePattern="${log.dir}/app-%d{yyyy-MM-dd}.log">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger - %msg %ex %n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+            </Policies>
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <!-- 默认日志级别 debug -->
+        <Root level="debug">
+            <!-- 默认日志输出到 控制台 -->
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="appFileLog"/>
+        </Root>
+        <!-- 打印spring info日志 -->
+        <logger name="org.springframework" level="info"/>
+    </Loggers>
+</Configuration>
