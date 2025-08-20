@@ -2,7 +2,7 @@ package com.mctech.sdk.openapi;
 
 import com.mctech.sdk.openapi.exception.MCTechOpenApiException;
 import lombok.Getter;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.net.URI;
 import java.util.HashMap;
