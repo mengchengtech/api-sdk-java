@@ -1,7 +1,7 @@
 package com.mctech.sdk.openapi;
 
-import com.mctech.sdk.openapi.exception.MCTechOpenApiException;
-import com.mctech.sdk.openapi.exception.MCTechOpenApiRequestException;
+import com.mctech.sdk.openapi.exception.OpenApiClientException;
+import com.mctech.sdk.openapi.exception.OpenApiRequestException;
 import com.sun.istack.internal.Nullable;
 import lombok.SneakyThrows;
 import org.apache.commons.codec.binary.Base64;
@@ -42,10 +42,10 @@ public class OpenApiClient {
     public OpenApiClient(String baseUri, String accessId, String secretKey) {
         this.baseUri = new URL(baseUri);
         if (!StringUtils.isNotEmpty(accessId)) {
-            throw new MCTechOpenApiException("accessId不能为null或empty");
+            throw new OpenApiClientException("accessId不能为null或empty");
         }
         if (!StringUtils.isNotEmpty(secretKey)) {
-            throw new MCTechOpenApiException("secret不能为null或empty");
+            throw new OpenApiClientException("secret不能为null或empty");
         }
 
         this.accessId = accessId;
@@ -60,40 +60,40 @@ public class OpenApiClient {
     }
 
     public RequestResult get(String apiPath, RequestOption option)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiRequestException {
         return this.request(HttpGet.class, apiPath, option);
     }
 
     public RequestResult delete(String apiPath, RequestOption option)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiRequestException {
         return this.request(HttpDelete.class, apiPath, option);
     }
 
     public RequestResult post(String apiPath, RequestOption option)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiRequestException {
         return this.request(HttpPost.class, apiPath, option);
     }
 
     public RequestResult put(String apiPath, RequestOption option)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiRequestException {
         return this.request(HttpPut.class, apiPath, option);
     }
 
     public RequestResult patch(String apiPath, RequestOption option)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiRequestException {
         return this.request(HttpPatch.class, apiPath, option);
     }
 
     @SneakyThrows({InstantiationException.class, IllegalAccessException.class})
     private <T extends HttpRequestBase> RequestResult request(Class<T> cls, String apiPath, RequestOption option)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiRequestException {
         T req = cls.newInstance();
         return this.request(req, apiPath, option);
     }
 
     @SneakyThrows({IOException.class, URISyntaxException.class})
     public RequestResult request(HttpRequestBase req, String apiPath, RequestOption option)
-        throws MCTechOpenApiException, MCTechOpenApiRequestException {
+        throws OpenApiClientException, OpenApiRequestException {
         if (req instanceof HttpEntityEnclosingRequest) {
             HttpEntity entity = option.getEntity();
             HttpEntityEnclosingRequest entityReq = (HttpEntityEnclosingRequest) req;
@@ -134,14 +134,14 @@ public class OpenApiClient {
 
     @SneakyThrows({NoSuchAlgorithmException.class, InvalidKeyException.class})
     private void makeSignature(HttpUriRequest req, @Nullable Map<String, String> headers)
-            throws MCTechOpenApiException {
+            throws OpenApiClientException {
         SignatureOption option = new SignatureOption(req.getURI(), req.getMethod(), CONTENT_TYPE_VALUE,
                 req.getFirstHeader(HttpHeaders.DATE).getValue());
         if (headers != null) {
             headers.forEach(req::setHeader);
             headers.forEach(option.getHeaders()::put);
         }
-        String canonicalString = SignUtility.buildCanonicalString(option);
+        String canonicalString = Utility.buildCanonicalString(option);
         byte[] key = secretKey.getBytes(StandardCharsets.UTF_8);
         SecretKeySpec signingKey = new SecretKeySpec(key, "HmacSHA1");
         Mac mac = Mac.getInstance("HmacSHA1");

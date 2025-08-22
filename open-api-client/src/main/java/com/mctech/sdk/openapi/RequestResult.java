@@ -2,7 +2,7 @@ package com.mctech.sdk.openapi;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
-import com.mctech.sdk.openapi.exception.MCTechOpenApiRequestException;
+import com.mctech.sdk.openapi.exception.OpenApiRequestException;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.http.Header;
@@ -78,7 +78,7 @@ public class RequestResult implements Closeable {
         return entity.getContent();
     }
 
-    RequestResult(CloseableHttpResponse response) throws MCTechOpenApiRequestException {
+    RequestResult(CloseableHttpResponse response) throws OpenApiRequestException {
         this.response = response;
         Header h = response.getEntity().getContentType();
         if (h != null) {
@@ -88,8 +88,8 @@ public class RequestResult implements Closeable {
         this.statusCode = response.getStatusLine().getStatusCode();
 
         if (this.statusCode >= HttpStatus.SC_BAD_REQUEST) {
-            ApiGatewayError error = createError(response);
-            throw new MCTechOpenApiRequestException(error.getMessage(), error);
+            ApiGatewayErrorData error = createError(response);
+            throw new OpenApiRequestException(error.getMessage(), error);
         }
     }
 
@@ -98,7 +98,7 @@ public class RequestResult implements Closeable {
     }
 
     @SneakyThrows
-    private static ApiGatewayError createError(CloseableHttpResponse response) {
+    private static ApiGatewayErrorData createError(CloseableHttpResponse response) {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         DocumentBuilder db = dbf.newDocumentBuilder();
         Document document = db.parse(response.getEntity().getContent());
@@ -112,7 +112,7 @@ public class RequestResult implements Closeable {
             map.put(name, value);
         }
 
-        return new ApiGatewayError(map);
+        return new ApiGatewayErrorData(map);
     }
 }
 
