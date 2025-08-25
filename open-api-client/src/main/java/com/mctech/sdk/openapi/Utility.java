@@ -4,7 +4,6 @@ import com.mctech.sdk.openapi.exception.OpenApiClientException;
 import lombok.SneakyThrows;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.Header;
 import org.apache.http.HttpHeaders;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.methods.HttpPatch;
@@ -29,46 +28,78 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.mctech.sdk.openapi.Constants.*;
+
 class Utility
 {
-    private static final String OpenApiPrefix = "x-iwop-";
-
     private Utility() {}
     /**
      * 从map中获取以prefix的值为开头的项
      */
-    private static Map<String, String> getCustomMap (Header[] headers, String prefix) {
+    private static Map<String, String> getCustomMap (List<NameValuePair> pairs) {
         Map<String, String> iwopValues = new HashMap<>();
-        Arrays.asList(headers).forEach(h -> {
+        pairs.forEach(h -> {
             String lowerCaseName = h.getName().toLowerCase();
-            if (lowerCaseName.startsWith(prefix)) {
+            if (lowerCaseName.startsWith(CUSTOM_PREFIX)) {
                 iwopValues.put(lowerCaseName, h.getValue());
             }
         });
         return iwopValues;
     }
 
-    private static SignedData computeSignature(SignatureOption option, String time) {
+    @SneakyThrows
+    private static String getResource(URI requestUri)
+    {
+        URIBuilder urlBuilder = new URIBuilder(requestUri);
+        if(!urlBuilder.isQueryEmpty()) {
+            List<NameValuePair> params = urlBuilder.getQueryParams();
+            for (NameValuePair p : params) {
+                // 排除掉表用于认证的固定参数
+                if (QUERY_KEYS.contains(p.getName())) {
+                    params.remove(p);
+                    continue;
+                }
+
+                // 排除掉特定前缀的参数，例如 'x-iwop-'
+                String lowerCaseName = p.getName().toLowerCase();
+                if (lowerCaseName.startsWith(CUSTOM_PREFIX)) {
+                    params.remove(p);
+                }
+            }
+            params.sort(Comparator.comparing(NameValuePair::getName));
+            urlBuilder.removeQuery().addParameters(params);
+        }
+        return urlBuilder.toString();
+    }
+
+    private static SignedData computeSignature(SignatureMode mode,SignatureOption option, String time) {
         List<String> signableItems = new ArrayList<>();
         signableItems.add(option.getMethod().toUpperCase());
         if (StringUtils.isNotEmpty(option.getContentType())) {
             signableItems.add(option.getContentType());
         }
         signableItems.add(time);
-        Map<String, String> custumMap = getCustomMap(option.getHeaders(), "x-iwop-");
-        List<String> keys = custumMap.keySet().stream()
-                .sorted()
-                .collect(Collectors.toList());
-        for (String key : keys) {
-            signableItems.add(key + ":" + custumMap.get(key));
+        Map<String, String> customMap = null;
+        if (mode == SignatureMode.HEADER) {
+            customMap = getCustomMap(Arrays.asList(option.getHeaders()));
+        } else if (mode == SignatureMode.QUERY) {
+            List<NameValuePair> params = new URIBuilder(option.getRequestUri()).getQueryParams();
+            customMap = getCustomMap(params);
+        }
+        if (customMap != null) {
+            List<String> keys = customMap.keySet().stream()
+                    .sorted()
+                    .collect(Collectors.toList());
+            for (String key : keys) {
+                signableItems.add(key + ":" + customMap.get(key));
+            }
         }
 
-        // add canonical resource
-        String canonicalizedResource = buildCanonicalizedResource(option.getRequestUri());
+        String canonicalizedResource = getResource(option.getRequestUri());
         signableItems.add(canonicalizedResource);
 
         String signable = StringUtils.join(signableItems, "\n");
-        String signature = Utility.hmacSha1(signable, option.getSecret());
+        String signature = hmacSha1(signable, option.getSecret());
         return new SignedData(signable, signature);
     }
 
@@ -82,19 +113,6 @@ class Utility
         byte[] signedData = mac.doFinal(data);
         return Base64.encodeBase64String(signedData);
     }
-
-    @SneakyThrows
-    private static String buildCanonicalizedResource(URI requestUri)
-    {
-        URIBuilder urlBuilder = new URIBuilder(requestUri);
-        List<NameValuePair> params = urlBuilder.getQueryParams();
-        if(!params.isEmpty()) {
-            params.sort(Comparator.comparing(NameValuePair::getName));
-            urlBuilder.removeQuery().addParameters(params);
-        }
-        return urlBuilder.toString();
-    }
-
 
     @SneakyThrows
     public static ApiGatewayErrorData resolveError(InputStream in) {
@@ -149,25 +167,25 @@ class Utility
                 }
         }
         String time;
-        if (mode == SignatureMode.QUERY) {
-            long d = duration != null ? duration : 30;
-            long expires = d + Instant.now().getEpochSecond();
-            time = Long.toString(expires);
-        } else {
-            time = DateUtils.formatDate(new Date(), DateUtils.PATTERN_RFC1123);
-        }
-
-        SignedData signed = Utility.computeSignature(option, time);
         Map<String, String> query = null;
         Map<String, String> headers = null;
         if (mode == SignatureMode.QUERY) {
+            long d = duration != null ? duration : DEFAULT_EXPIRES;
+            long expires = d + Instant.now().getEpochSecond();
+            time = Long.toString(expires);
             query = new HashMap<>();
-            query.put("Signature", signed.getSignature());
             query.put("Expires", time);
         } else {
+            time = DateUtils.formatDate(new Date(), DateUtils.PATTERN_RFC1123);
             headers = new HashMap<>();
-            headers.put(HttpHeaders.AUTHORIZATION, "IWOP " + option.getAccessId() + ":" + signed.getSignature());
             headers.put(HttpHeaders.DATE, time);
+        }
+
+        SignedData signed = computeSignature(mode, option, time);
+        if (mode == SignatureMode.QUERY) {
+            query.put("Signature", signed.getSignature());
+        } else {
+            headers.put(HttpHeaders.AUTHORIZATION, "IWOP " + option.getAccessId() + ":" + signed.getSignature());
         }
         return new SignedInfo(mode, signed, headers, query);
     }

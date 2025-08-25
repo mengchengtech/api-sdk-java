@@ -15,6 +15,8 @@ import java.util.Map;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class RequestOption {
     @Getter
+    private final Integer timeout;
+    @Getter
     private final Map<String, String> query;
     @Getter
     private final Map<String, String> headers;
@@ -28,6 +30,7 @@ public class RequestOption {
     }
 
     public static class Builder {
+        private Integer timeout;
         private final HashMap<String, String> query;
         private final HashMap<String, String> headers;
         private HttpEntity entity;
@@ -36,6 +39,11 @@ public class RequestOption {
         private Builder() {
             this.query = new HashMap<>();
             this.headers = new HashMap<>();
+        }
+
+        public Builder timeout(int timeout) {
+            this.timeout = timeout;
+            return this;
         }
 
         public Builder query(String name, Object value) {
@@ -67,7 +75,7 @@ public class RequestOption {
         }
 
         public RequestOption build() {
-            return new RequestOption(this.query, this.headers, this.contentType, this.entity);
+            return new RequestOption(timeout, query, headers, contentType, entity);
         }
     }
 }

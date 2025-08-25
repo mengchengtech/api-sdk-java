@@ -6,6 +6,7 @@ import com.sun.istack.internal.Nullable;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.*;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -108,6 +109,14 @@ public class OpenApiClient {
         }
         req.setURI(apiUri);
         makeSignature(req, option.getHeaders());
+
+        Integer timeout = option.getTimeout();
+        if (timeout != null && timeout > 0) {
+            RequestConfig requestConfig = RequestConfig.custom()
+                    .setSocketTimeout(timeout)            // 响应数据传输超时
+                    .build();
+            req.setConfig(requestConfig);
+        }
         CloseableHttpResponse response = this.httpClient.execute(req);
 
         int statusCode = response.getStatusLine().getStatusCode();
