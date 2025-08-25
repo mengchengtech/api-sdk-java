@@ -4,27 +4,19 @@ import com.mctech.sdk.openapi.exception.OpenApiClientException;
 import com.mctech.sdk.openapi.exception.OpenApiRequestException;
 import com.sun.istack.internal.Nullable;
 import lombok.SneakyThrows;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpEntityEnclosingRequest;
-import org.apache.http.HttpHeaders;
+import org.apache.http.*;
 import org.apache.http.client.methods.*;
-import org.apache.http.client.utils.DateUtils;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicHeader;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.util.Date;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -105,50 +97,45 @@ public class OpenApiClient {
                 if (StringUtils.isEmpty(option.getContentType())) {
                     contentType = CONTENT_TYPE_VALUE;
                 }
-                req.setHeader(new BasicHeader(HttpHeaders.CONTENT_TYPE, contentType));
+                req.setHeader(HttpHeaders.CONTENT_TYPE, contentType);
             }
         }
-
-        StringBuilder qs = new StringBuilder("?");
-        Map<String, String> query = option.getQuery();
-        if (query != null && !query.isEmpty()) {
-            for (Map.Entry<String, String> entry : query.entrySet()) {
-                if (qs.length() > 1) {
-                    qs.append("&");
-                }
-                String key = URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8.name());
-                String value = URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8.name());
-                qs.append(key).append("=").append(value);
-            }
+        URI apiUri = new URL(this.baseUri, apiPath).toURI();
+        if (option.getQuery() != null) {
+            URIBuilder urlBuilder = new URIBuilder(apiUri);
+            option.getQuery().forEach(urlBuilder::addParameter);
+            apiUri = urlBuilder.build();
         }
-        String pathAndQuery = qs.length() > 1 ? apiPath + qs : apiPath;
-        URL apiUrl = new URL(this.baseUri, pathAndQuery);
-        req.setURI(apiUrl.toURI());
-
-        String formatDate = DateUtils.formatDate(new Date());
-        req.setHeader(new BasicHeader(HttpHeaders.DATE, formatDate));
+        req.setURI(apiUri);
         makeSignature(req, option.getHeaders());
         CloseableHttpResponse response = this.httpClient.execute(req);
+
+        int statusCode = response.getStatusLine().getStatusCode();
+        if (statusCode >= HttpStatus.SC_BAD_REQUEST) {
+            InputStream xmlContent = response.getEntity().getContent();
+            ApiGatewayErrorData error = Utility.resolveError(xmlContent);
+            throw new OpenApiRequestException(error.getMessage(), error);
+        }
+
         return new RequestResult(response);
     }
 
-    @SneakyThrows({NoSuchAlgorithmException.class, InvalidKeyException.class})
     private void makeSignature(HttpUriRequest req, @Nullable Map<String, String> headers)
             throws OpenApiClientException {
-        SignatureOption option = new SignatureOption(req.getURI(), req.getMethod(), CONTENT_TYPE_VALUE,
-                req.getFirstHeader(HttpHeaders.DATE).getValue());
         if (headers != null) {
             headers.forEach(req::setHeader);
-            headers.forEach(option.getHeaders()::put);
         }
-        String canonicalString = Utility.buildCanonicalString(option);
-        byte[] key = secretKey.getBytes(StandardCharsets.UTF_8);
-        SecretKeySpec signingKey = new SecretKeySpec(key, "HmacSHA1");
-        Mac mac = Mac.getInstance("HmacSHA1");
-        mac.init(signingKey);
-        byte[] data = canonicalString.getBytes(StandardCharsets.UTF_8);
-        byte[] signedData = mac.doFinal(data);
-        String signature = Base64.encodeBase64String(signedData);
-        req.addHeader(HttpHeaders.AUTHORIZATION, "IWOP " + this.accessId + ":" + signature);
+        Header contentType = req.getFirstHeader(HttpHeaders.CONTENT_TYPE);
+        SignatureOption option = new SignatureOption(
+                this.accessId,
+                this.secretKey,
+                req.getURI(),
+                req.getMethod(),
+                contentType != null ? contentType.getValue(): null,
+                req.getAllHeaders()
+        );
+
+        SignedInfo signedInfo = Utility.generateHeaderSignature(option);
+        signedInfo.getHeaders().forEach(req::setHeader);
     }
 }

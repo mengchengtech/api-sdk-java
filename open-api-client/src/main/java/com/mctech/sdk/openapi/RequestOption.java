@@ -1,5 +1,7 @@
 package com.mctech.sdk.openapi;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.BasicHttpEntity;
@@ -10,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class RequestOption {
     @Getter
     private final Map<String, String> query;
@@ -19,13 +22,6 @@ public class RequestOption {
     private final String contentType;
     @Getter
     private final HttpEntity entity;
-
-    RequestOption(Map<String, String> query, Map<String, String> headers, String contentType, HttpEntity entity) {
-        this.query = query;
-        this.headers = headers;
-        this.entity = entity;
-        this.contentType = contentType;
-    }
 
     public static Builder newBuilder() {
         return new Builder();
