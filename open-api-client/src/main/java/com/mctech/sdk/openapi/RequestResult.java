@@ -3,8 +3,6 @@ package com.mctech.sdk.openapi;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.mctech.sdk.openapi.exception.MCTechOpenApiRequestException;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;

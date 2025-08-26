@@ -12,18 +12,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-class SignUtility
-{
+class SignUtility {
     private static final String OpenApiPrefix = "x-iwop-";
 
-    public static String buildCanonicalString(SignatureOption option)
-    {
+    public static String buildCanonicalString(SignatureOption option) {
         List<String> itemsToSign = new ArrayList<>();
         itemsToSign.add(option.getMethod());
         itemsToSign.add(option.getContentType());
         //itemsToSign.add(option.ContentMd5);
         itemsToSign.add(option.getFormatedDate());
-        
+
         Map<String, String> headers = option.getHeaders();
         List<String> keys = headers.keySet().stream()
                 .filter(key -> key.toLowerCase().startsWith(OpenApiPrefix))
@@ -32,7 +30,7 @@ class SignUtility
         for (String key : keys) {
             itemsToSign.add(key + ":" + headers.get(key));
         }
-        
+
         // add canonical resource
         String canonicalizedResource = buildCanonicalizedResource(option.getRequestUri());
         itemsToSign.add(canonicalizedResource);
@@ -41,11 +39,10 @@ class SignUtility
     }
 
     @SneakyThrows
-    private static String buildCanonicalizedResource(URI requestUri)
-    {
+    private static String buildCanonicalizedResource(URI requestUri) {
         URIBuilder urlBuilder = new URIBuilder(requestUri);
         List<NameValuePair> params = urlBuilder.getQueryParams();
-        if(!params.isEmpty()) {
+        if (!params.isEmpty()) {
             params.sort(Comparator.comparing(NameValuePair::getName));
             urlBuilder.removeQuery().addParameters(params);
         }

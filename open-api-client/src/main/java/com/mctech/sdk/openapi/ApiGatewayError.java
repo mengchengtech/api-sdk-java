@@ -20,23 +20,23 @@ public class ApiGatewayError {
         return this.map.get(PROP_CODE);
     }
 
-    public String getMessage()  {
+    public String getMessage() {
         return this.map.get(PROP_MESSAGE);
     }
 
-    public  String getStringToSignBytes()  {
+    public String getStringToSignBytes() {
         return this.map.get(PROP_STRING_TO_SIGN_BYTES);
     }
 
-    public  String getSignatureProvided()  {
+    public String getSignatureProvided() {
         return this.map.get(PROP_SIGNATURE_PROVIDED);
     }
 
-    public String getStringToSign()  {
+    public String getStringToSign() {
         return this.map.get(PROP_STRING_TO_SIGN);
     }
 
-    public String getAccessKeyId()  {
+    public String getAccessKeyId() {
         return this.map.get(PROP_ACCESS_KEY_ID);
     }
 

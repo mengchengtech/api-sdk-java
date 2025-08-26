@@ -18,7 +18,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -117,7 +116,7 @@ public class OpenApiClient {
         return SendRequest(pathAndQuery, httpPatch);
     }
 
-    @SneakyThrows({ IOException.class, URISyntaxException.class })
+    @SneakyThrows({IOException.class, URISyntaxException.class})
     private RequestResult SendRequest(String pathAndQuery, HttpRequestBase request)
             throws MCTechOpenApiException, MCTechOpenApiRequestException {
         URL apiUrl = new URL(this.baseUri, pathAndQuery);
@@ -128,7 +127,7 @@ public class OpenApiClient {
         return result;
     }
 
-    @SneakyThrows({ NoSuchAlgorithmException.class, InvalidKeyException.class })
+    @SneakyThrows({NoSuchAlgorithmException.class, InvalidKeyException.class})
     private void initRequest(HttpUriRequest request)
             throws MCTechOpenApiException {
         String formatDate = DateUtils.formatDate(new Date());

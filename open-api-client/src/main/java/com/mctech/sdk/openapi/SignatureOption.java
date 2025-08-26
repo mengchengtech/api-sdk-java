@@ -9,8 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Getter
-class SignatureOption
-{
+class SignatureOption {
     private final URI requestUri;
     private final String method;
     private final String contentType;
