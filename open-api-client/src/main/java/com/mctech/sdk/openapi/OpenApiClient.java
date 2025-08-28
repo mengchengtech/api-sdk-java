@@ -1,7 +1,5 @@
 package com.mctech.sdk.openapi;
 
-import com.mctech.sdk.openapi.exception.MCTechOpenApiException;
-import com.mctech.sdk.openapi.exception.MCTechOpenApiRequestException;
 import lombok.SneakyThrows;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
@@ -43,10 +41,10 @@ public class OpenApiClient {
     public OpenApiClient(String baseUri, String accessId, String secretKey) {
         this.baseUri = new URL(baseUri);
         if (!StringUtils.isNotEmpty(accessId)) {
-            throw new MCTechOpenApiException("accessId不能为null或empty");
+            throw new OpenApiClientException("accessId不能为null或empty");
         }
         if (!StringUtils.isNotEmpty(secretKey)) {
-            throw new MCTechOpenApiException("secret不能为null或empty");
+            throw new OpenApiClientException("secret不能为null或empty");
         }
 
         this.accessId = accessId;
@@ -55,19 +53,19 @@ public class OpenApiClient {
     }
 
     public RequestResult get(String pathAndQuery)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiResponseException {
         HttpGet httpGet = new HttpGet();
         return SendRequest(pathAndQuery, httpGet);
     }
 
     public RequestResult delete(String pathAndQuery)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiResponseException {
         HttpDelete httpDelete = new HttpDelete();
         return SendRequest(pathAndQuery, httpDelete);
     }
 
     public RequestResult post(String pathAndQuery, String body)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiResponseException {
         HttpPost httpPost = new HttpPost();
         byte[] data = body.getBytes(DEFAULT_CHARSET);
         httpPost.setEntity(new ByteArrayEntity(data));
@@ -75,7 +73,7 @@ public class OpenApiClient {
     }
 
     public RequestResult post(String pathAndQuery, InputStream streamBody)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiResponseException {
         HttpPost httpPost = new HttpPost();
         BasicHttpEntity entity = new BasicHttpEntity();
         entity.setContent(streamBody);
@@ -84,7 +82,7 @@ public class OpenApiClient {
     }
 
     public RequestResult put(String pathAndQuery, String body)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiResponseException {
         HttpPut httpPut = new HttpPut();
         byte[] data = body.getBytes(StandardCharsets.UTF_8);
         httpPut.setEntity(new ByteArrayEntity(data));
@@ -92,7 +90,7 @@ public class OpenApiClient {
     }
 
     public RequestResult put(String pathAndQuery, InputStream streamBody)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiResponseException {
         HttpPut httpPut = new HttpPut();
         BasicHttpEntity entity = new BasicHttpEntity();
         entity.setContent(streamBody);
@@ -101,7 +99,7 @@ public class OpenApiClient {
     }
 
     public RequestResult patch(String pathAndQuery, String body)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiResponseException {
         HttpPatch httpPatch = new HttpPatch();
         byte[] data = body.getBytes(StandardCharsets.UTF_8);
         httpPatch.setEntity(new ByteArrayEntity(data));
@@ -109,7 +107,7 @@ public class OpenApiClient {
     }
 
     public RequestResult patch(String pathAndQuery, InputStream streamBody)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiResponseException {
         HttpPatch httpPatch = new HttpPatch();
         BasicHttpEntity entity = new BasicHttpEntity();
         entity.setContent(streamBody);
@@ -119,7 +117,7 @@ public class OpenApiClient {
 
     @SneakyThrows({IOException.class, URISyntaxException.class})
     private RequestResult SendRequest(String pathAndQuery, HttpRequestBase request)
-            throws MCTechOpenApiException, MCTechOpenApiRequestException {
+            throws OpenApiClientException, OpenApiResponseException {
         URL apiUrl = new URL(this.baseUri, pathAndQuery);
         request.setURI(apiUrl.toURI());
         initRequest(request);
@@ -129,7 +127,7 @@ public class OpenApiClient {
 
     @SneakyThrows({NoSuchAlgorithmException.class, InvalidKeyException.class})
     private void initRequest(HttpUriRequest request)
-            throws MCTechOpenApiException {
+            throws OpenApiClientException {
         String formatDate = DateUtils.formatDate(new Date());
         request.setHeader(new BasicHeader(HttpHeaders.DATE, formatDate));
         request.setHeader(new BasicHeader(HttpHeaders.ACCEPT, ACCEPT));
@@ -138,7 +136,7 @@ public class OpenApiClient {
 
         String httpMethod = request.getMethod();
         SignatureOption option = new SignatureOption(request.getURI(), httpMethod, CONTENT_TYPE, formatDate);
-        String canonicalString = SignUtility.buildCanonicalString(option);
+        String canonicalString = Utility.buildCanonicalString(option);
 
         byte[] key = secretKey.getBytes(DEFAULT_CHARSET);
         SecretKeySpec signingKey = new SecretKeySpec(key, "HmacSHA1");

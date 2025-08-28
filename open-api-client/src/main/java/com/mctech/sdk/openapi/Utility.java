@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-class SignUtility {
+class Utility {
     private static final String OpenApiPrefix = "x-iwop-";
 
     public static String buildCanonicalString(SignatureOption option) {

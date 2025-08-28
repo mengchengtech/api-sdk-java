@@ -2,7 +2,7 @@ package com.mctech.sdk.openapi;
 
 import java.util.Map;
 
-public class ApiGatewayError {
+public class ApiGatewayErrorData {
     private static final String PROP_CODE = "Code";
     private static final String PROP_MESSAGE = "Message";
     private static final String PROP_STRING_TO_SIGN_BYTES = "StringToSignBytes";
@@ -12,7 +12,7 @@ public class ApiGatewayError {
 
     private final Map<String, String> map;
 
-    public ApiGatewayError(Map<String, String> map) {
+    public ApiGatewayErrorData(Map<String, String> map) {
         this.map = map;
     }
 

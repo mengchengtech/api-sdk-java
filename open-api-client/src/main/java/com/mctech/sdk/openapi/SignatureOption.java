@@ -1,6 +1,5 @@
 package com.mctech.sdk.openapi;
 
-import com.mctech.sdk.openapi.exception.MCTechOpenApiException;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 
@@ -18,10 +17,10 @@ class SignatureOption {
     private final Map<String, String> headers;
 
     SignatureOption(URI requestUri, String method, String contentType, String formatedDate)
-            throws MCTechOpenApiException {
+            throws OpenApiClientException {
         if (HttpMethod.Post.equals(method) || HttpMethod.Put.equals(method) || HttpMethod.Patch.equals(method)) {
             if (!StringUtils.isNotEmpty(contentType)) {
-                throw new MCTechOpenApiException("http请求缺少'content-type'头。请求方式为[" + method + "]时，需要在RpcInvoker的headers属性上设置'content-type'");
+                throw new OpenApiClientException("http请求缺少'content-type'头。请求方式为[" + method + "]时，需要在RpcInvoker的headers属性上设置'content-type'");
             }
         }
 
