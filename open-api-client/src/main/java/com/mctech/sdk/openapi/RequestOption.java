@@ -54,7 +54,7 @@ public class RequestOption {
             return this;
         }
 
-        public Builder addQueries(Map<String, Object> query) {
+        public Builder addQuery(Map<String, Object> query) {
             if (query != null && !query.isEmpty()) {
                 query.forEach((k, v) -> this.query.put(k, v.toString()));
             }
@@ -66,7 +66,7 @@ public class RequestOption {
             return this;
         }
 
-        public Builder addHeaders(Map<String, Object> headers) {
+        public Builder addHeader(Map<String, Object> headers) {
             if (headers != null && !headers.isEmpty()) {
                 headers.forEach((k, v) -> this.headers.put(k, v.toString()));
             }

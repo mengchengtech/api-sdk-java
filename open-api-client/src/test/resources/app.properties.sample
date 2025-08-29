@@ -1,0 +1,5 @@
+credential.accessId={accessId}
+credential.secretKey={secretKey}
+baseUrl={baseUrl}
+apiPath={apiPath}
+integrationId={integrationId}
