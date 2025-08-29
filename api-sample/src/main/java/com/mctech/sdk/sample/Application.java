@@ -6,39 +6,43 @@ import lombok.SneakyThrows;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.InputStream;
 import java.util.HashMap;
 
 public class Application {
-    private static final String accessId = "{accessId}";
-    private static final String secretKey = "{secretKey}";
-
-    private static final String baseUrl = "https://test.mctech.vip/api-ex/-itg-/";
-
-    private static final String apiPath = "cb/project-wbs/items";
-
-    private static final String integrationId = "{integrationId}";
 
     private static final Logger logger = LogManager.getLogger("logger");
 
-    private static final OpenApiClient client = new OpenApiClient(baseUrl, accessId, secretKey);
+    private final Config config;
+    private final OpenApiClient client;
+
+    @SneakyThrows
+    public Application() {
+        this.config = new Config();
+        try (InputStream in = Application.class.getResourceAsStream("/app.properties")) {
+            config.load(in);
+        }
+        client = new OpenApiClient(config.getBaseUrl(), config.getAccessId(), config.getSecretKey());
+    }
 
     public static void main(String[] args) {
-        testGetByHeader();
-        testGetByQuery();
-        testPostByHeader();
+        Application app = new Application();
+        app.testGetByHeader();
+        app.testGetByQuery();
+        app.testPostByHeader();
     }
 
     @SneakyThrows
-    private static void testGetByHeader() {
+    private void testGetByHeader() {
         RequestOption option = RequestOption.newBuilder()
-                .addQuery("integratedProjectId", integrationId)
-                .addHeaders(new HashMap<String, Object>() {{
+                .addQuery("integratedProjectId", config.getIntegrationId())
+                .addHeader(new HashMap<String, Object>() {{
                     put("X-iwop-before", "wq666");
-                    put("x-iwop-integration-id", integrationId);
+                    put("x-iwop-integration-id", config.getIntegrationId());
                     put("x-IWOP-after", "wq666");
                 }})
                 .build();
-        try (RequestResult result = client.get(apiPath, option)) {
+        try (RequestResult result = client.get(config.getApiPath(), option)) {
             System.out.println(result.getString());
         } catch (OpenApiClientException e) {
             logger.error(e.getMessage(), e);
@@ -54,17 +58,17 @@ public class Application {
     }
 
     @SneakyThrows
-    private static void testGetByQuery() {
+    private void testGetByQuery() {
         RequestOption option = RequestOption.newBuilder()
                 .signedBy(new SignedByQuery(new QuerySignatureParams(3600)))
-                .addQuery("integratedProjectId", integrationId)
-                .addQueries(new HashMap<String, Object>() {{
+                .addQuery("integratedProjectId", config.getIntegrationId())
+                .addQuery(new HashMap<String, Object>() {{
                     put("X-iwop-before", "wq666");
-                    put("x-iwop-integration-id", integrationId);
+                    put("x-iwop-integration-id", config.getIntegrationId());
                     put("x-IWOP-after", "wq666");
                 }})
                 .build();
-        try (RequestResult result = client.get(apiPath, option)) {
+        try (RequestResult result = this.client.get(config.getApiPath(), option)) {
             System.out.println(result.getString());
         } catch (OpenApiClientException e) {
             logger.error(e.getMessage(), e);
@@ -80,14 +84,14 @@ public class Application {
     }
 
     @SneakyThrows
-    private static void testPostByHeader() {
+    private void testPostByHeader() {
         RequestOption option = RequestOption.newBuilder()
-                .addQuery("integratedProjectId", integrationId)
-                .addHeader("x-iwop-integration-id", integrationId)
+                .addQuery("integratedProjectId", config.getIntegrationId())
+                .addHeader("x-iwop-integration-id", config.getIntegrationId())
                 .contentType("application/xml")
                 .body("<body></body>")
                 .build();
-        try (RequestResult result = client.post(apiPath, option)) {
+        try (RequestResult result = this.client.post(config.getApiPath(), option)) {
             System.out.println(result.getString());
         } catch (OpenApiClientException e) {
             logger.error(e.getMessage(), e);
