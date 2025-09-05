@@ -5,6 +5,7 @@ import java.util.Map;
 public class ApiGatewayErrorData {
     private static final String PROP_CODE = "Code";
     private static final String PROP_MESSAGE = "Message";
+    private static final String PROP_CLIENT_IP = "ClientIP";
     private static final String PROP_STRING_TO_SIGN_BYTES = "StringToSignBytes";
     private static final String PROP_SIGNATURE_PROVIDED = "SignatureProvided";
     private static final String PROP_STRING_TO_SIGN = "StringToSign";
@@ -22,6 +23,10 @@ public class ApiGatewayErrorData {
 
     public String getMessage() {
         return this.map.get(PROP_MESSAGE);
+    }
+
+    public String getClientIP() {
+        return this.map.get(PROP_CLIENT_IP);
     }
 
     public String getStringToSignBytes() {

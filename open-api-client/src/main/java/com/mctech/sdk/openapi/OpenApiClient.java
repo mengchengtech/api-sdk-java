@@ -1,35 +1,27 @@
 package com.mctech.sdk.openapi;
 
+import com.sun.istack.internal.Nullable;
 import lombok.SneakyThrows;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpHeaders;
+import org.apache.http.*;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
-import org.apache.http.client.utils.DateUtils;
-import org.apache.http.entity.BasicHttpEntity;
-import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicHeader;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.util.Date;
+import java.util.Arrays;
 
 public class OpenApiClient {
-    private static final String DEFAULT_CHARSET_NAME = "utf-8";
-    private static final Charset DEFAULT_CHARSET = Charset.forName(DEFAULT_CHARSET_NAME);
-
-    private static final String CONTENT_TYPE = "application/json; charset=UTF-8";
-    private static final String ACCEPT = "application/json, application/xml";
+    private static final String CONTENT_TYPE_VALUE = "application/json; charset=UTF-8";
+    private static final String ACCEPT_VALUE = "application/json, application/xml, */*";
 
     private final String accessId;
     private final String secretKey;
@@ -37,7 +29,7 @@ public class OpenApiClient {
     private final CloseableHttpClient httpClient;
 
 
-    @SneakyThrows
+    @SneakyThrows({MalformedURLException.class})
     public OpenApiClient(String baseUri, String accessId, String secretKey) {
         this.baseUri = new URL(baseUri);
         if (!StringUtils.isNotEmpty(accessId)) {
@@ -49,102 +41,110 @@ public class OpenApiClient {
 
         this.accessId = accessId;
         this.secretKey = secretKey;
-        this.httpClient = HttpClients.createDefault();
+        this.httpClient = HttpClients.custom()
+                .setDefaultHeaders(
+                        Arrays.asList(
+                                new BasicHeader(HttpHeaders.ACCEPT, ACCEPT_VALUE),
+                                // new BasicHeader(HttpHeaders.ACCEPT_ENCODING, "gzip,deflate"), // default enable "gzip,deflate"
+                                new BasicHeader(HttpHeaders.ACCEPT_LANGUAGE, "zh-CN")
+                        )
+                )
+                .build();
     }
 
-    public RequestResult get(String pathAndQuery)
-            throws OpenApiClientException, OpenApiResponseException {
-        HttpGet httpGet = new HttpGet();
-        return SendRequest(pathAndQuery, httpGet);
+    public RequestResult get(String apiPath, RequestOption option) throws OpenApiResponseException {
+        return this.request(new HttpGet(), apiPath, option);
     }
 
-    public RequestResult delete(String pathAndQuery)
-            throws OpenApiClientException, OpenApiResponseException {
-        HttpDelete httpDelete = new HttpDelete();
-        return SendRequest(pathAndQuery, httpDelete);
+    public RequestResult delete(String apiPath, RequestOption option) throws OpenApiResponseException {
+        return this.request(new HttpDelete(), apiPath, option);
     }
 
-    public RequestResult post(String pathAndQuery, String body)
-            throws OpenApiClientException, OpenApiResponseException {
-        HttpPost httpPost = new HttpPost();
-        byte[] data = body.getBytes(DEFAULT_CHARSET);
-        httpPost.setEntity(new ByteArrayEntity(data));
-        return SendRequest(pathAndQuery, httpPost);
+    public RequestResult post(String apiPath, RequestOption option) throws OpenApiResponseException {
+        return this.request(new HttpPost(), apiPath, option);
     }
 
-    public RequestResult post(String pathAndQuery, InputStream streamBody)
-            throws OpenApiClientException, OpenApiResponseException {
-        HttpPost httpPost = new HttpPost();
-        BasicHttpEntity entity = new BasicHttpEntity();
-        entity.setContent(streamBody);
-        httpPost.setEntity(entity);
-        return SendRequest(pathAndQuery, httpPost);
+    public RequestResult put(String apiPath, RequestOption option) throws OpenApiResponseException {
+        return this.request(new HttpPut(), apiPath, option);
     }
 
-    public RequestResult put(String pathAndQuery, String body)
-            throws OpenApiClientException, OpenApiResponseException {
-        HttpPut httpPut = new HttpPut();
-        byte[] data = body.getBytes(StandardCharsets.UTF_8);
-        httpPut.setEntity(new ByteArrayEntity(data));
-        return SendRequest(pathAndQuery, httpPut);
-    }
-
-    public RequestResult put(String pathAndQuery, InputStream streamBody)
-            throws OpenApiClientException, OpenApiResponseException {
-        HttpPut httpPut = new HttpPut();
-        BasicHttpEntity entity = new BasicHttpEntity();
-        entity.setContent(streamBody);
-        httpPut.setEntity(entity);
-        return SendRequest(pathAndQuery, httpPut);
-    }
-
-    public RequestResult patch(String pathAndQuery, String body)
-            throws OpenApiClientException, OpenApiResponseException {
-        HttpPatch httpPatch = new HttpPatch();
-        byte[] data = body.getBytes(StandardCharsets.UTF_8);
-        httpPatch.setEntity(new ByteArrayEntity(data));
-        return SendRequest(pathAndQuery, httpPatch);
-    }
-
-    public RequestResult patch(String pathAndQuery, InputStream streamBody)
-            throws OpenApiClientException, OpenApiResponseException {
-        HttpPatch httpPatch = new HttpPatch();
-        BasicHttpEntity entity = new BasicHttpEntity();
-        entity.setContent(streamBody);
-        httpPatch.setEntity(entity);
-        return SendRequest(pathAndQuery, httpPatch);
+    public RequestResult patch(String apiPath, RequestOption option) throws OpenApiResponseException {
+        return this.request(new HttpPatch(), apiPath, option);
     }
 
     @SneakyThrows({IOException.class, URISyntaxException.class})
-    private RequestResult SendRequest(String pathAndQuery, HttpRequestBase request)
-            throws OpenApiClientException, OpenApiResponseException {
-        URL apiUrl = new URL(this.baseUri, pathAndQuery);
-        request.setURI(apiUrl.toURI());
-        initRequest(request);
-        CloseableHttpResponse response = this.httpClient.execute(request);
+    public RequestResult request(HttpRequestBase req, String apiPath, RequestOption option)
+            throws OpenApiResponseException {
+        if (req instanceof HttpEntityEnclosingRequest) {
+            HttpEntity entity = option.getEntity();
+            HttpEntityEnclosingRequest entityReq = (HttpEntityEnclosingRequest) req;
+            if (entity != null) {
+                entityReq.setEntity(entity);
+            }
+            if (entityReq.getEntity() != null) {
+                String contentType = option.getContentType();
+                if (StringUtils.isEmpty(option.getContentType())) {
+                    contentType = CONTENT_TYPE_VALUE;
+                }
+                req.setHeader(HttpHeaders.CONTENT_TYPE, contentType);
+            }
+        }
+        URI apiUri = new URL(this.baseUri, apiPath).toURI();
+        if (!option.getQuery().isEmpty()) {
+            URIBuilder urlBuilder = new URIBuilder(apiUri);
+            option.getQuery().forEach(urlBuilder::setParameter);
+            apiUri = urlBuilder.build();
+        }
+        req.setURI(apiUri);
+        if (!option.getHeaders().isEmpty()) {
+            option.getHeaders().forEach(req::setHeader);
+        }
+
+        this.makeSignature(req, option.getSignedBy());
+
+        Integer timeout = option.getTimeout();
+        if (timeout != null && timeout > 0) {
+            RequestConfig requestConfig = RequestConfig.custom()
+                    .setSocketTimeout(timeout)            // 响应数据传输超时
+                    .build();
+            req.setConfig(requestConfig);
+        }
+        CloseableHttpResponse response = this.httpClient.execute(req);
+
+        int statusCode = response.getStatusLine().getStatusCode();
+        if (statusCode >= HttpStatus.SC_BAD_REQUEST) {
+            InputStream xmlContent = response.getEntity().getContent();
+            ApiGatewayErrorData error = Utility.resolveError(xmlContent);
+            throw new OpenApiResponseException(error.getMessage(), statusCode, error);
+        }
         return new RequestResult(response);
     }
 
-    @SneakyThrows({NoSuchAlgorithmException.class, InvalidKeyException.class})
-    private void initRequest(HttpUriRequest request)
-            throws OpenApiClientException {
-        String formatDate = DateUtils.formatDate(new Date());
-        request.setHeader(new BasicHeader(HttpHeaders.DATE, formatDate));
-        request.setHeader(new BasicHeader(HttpHeaders.ACCEPT, ACCEPT));
-        request.setHeader(new BasicHeader(HttpHeaders.ACCEPT_LANGUAGE, "zh-CN"));
-        request.setHeader(new BasicHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE));
+    @SneakyThrows({URISyntaxException.class})
+    private void makeSignature(HttpRequestBase req, @Nullable SignedBy signedBy) {
+        NameValuePair contentType = req.getFirstHeader(HttpHeaders.CONTENT_TYPE);
+        SignatureOption option = new SignatureOption(
+                this.accessId,
+                this.secretKey,
+                req.getURI(),
+                req.getMethod(),
+                contentType != null ? contentType.getValue() : null,
+                Arrays.asList(req.getAllHeaders())
+        );
 
-        String httpMethod = request.getMethod();
-        SignatureOption option = new SignatureOption(request.getURI(), httpMethod, CONTENT_TYPE, formatDate);
-        String canonicalString = Utility.buildCanonicalString(option);
+        if (signedBy == null) {
+            signedBy = new SignedByHeader();
+        }
+        SignedInfo signedInfo = Utility.generateSignature(signedBy, option);
+        if (signedInfo.getHeaders() != null) {
+            signedInfo.getHeaders().forEach(req::setHeader);
+        }
 
-        byte[] key = secretKey.getBytes(DEFAULT_CHARSET);
-        SecretKeySpec signingKey = new SecretKeySpec(key, "HmacSHA1");
-        Mac mac = Mac.getInstance("HmacSHA1");
-        mac.init(signingKey);
-        byte[] data = canonicalString.getBytes(DEFAULT_CHARSET);
-        byte[] signedData = mac.doFinal(data);
-        String signature = Base64.encodeBase64String(signedData);
-        request.addHeader(HttpHeaders.AUTHORIZATION, "IWOP " + this.accessId + ":" + signature);
+        if (signedInfo.getQuery() != null) {
+            URIBuilder builder = new URIBuilder(req.getURI());
+            signedInfo.getQuery().forEach(builder::setParameter);
+            URI targetURI = builder.build();
+            req.setURI(targetURI);
+        }
     }
 }
